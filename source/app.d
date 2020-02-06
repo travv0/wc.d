@@ -132,40 +132,45 @@ the following order: newline, word, character, byte.
 }
 
 void main(string[] args) {
-  auto helpInfo = getopt(args,
-                         config.bundling,
-                         config.passThrough,
-                         "bytes|c", "print the byte counts", &bytes,
-                         "chars|m", "print the character counts", &chars,
-                         "lines|l", "print the newline counts", &lines,
-                         "words|w", "print the word counts", &words);
+  try {
+    auto helpInfo = getopt(args,
+                           config.bundling,
+                           config.passThrough,
+                           "bytes|c", "print the byte counts", &bytes,
+                           "chars|m", "print the character counts", &chars,
+                           "lines|l", "print the newline counts", &lines,
+                           "words|w", "print the word counts", &words);
 
-  auto programName = args[0];
-  auto fileNames = args.drop(1);
-  auto columnWidth = fileBytesSumWidth(fileNames);
-  auto total = Output(0, 0, 0, 0);
+    auto programName = args[0];
+    auto fileNames = args.drop(1);
+    auto columnWidth = fileBytesSumWidth(fileNames);
+    auto total = Output(0, 0, 0, 0);
 
-  if (helpInfo.helpWanted) {
-    defaultGetoptPrinter(programInfo(programName), helpInfo.options);
-    exit(0);
-  }
-
-  if (!(bytes || chars || lines || words)) {
-    bytes = words = lines = true;
-  }
-
-  if (fileNames.length == 0 || fileNames[0] == "-") {
-    printLine(wc(stdin),
-              fileNames.length == 0 ? "" : "-",
-              7);
-  }
-  else {
-    foreach (fileName; fileNames) {
-      total += processFile(programName, fileName, columnWidth);
+    if (helpInfo.helpWanted) {
+      defaultGetoptPrinter(programInfo(programName), helpInfo.options);
+      exit(0);
     }
 
-    if (fileNames.length > 1) {
-      printLine(total, "total", columnWidth);
+    if (!(bytes || chars || lines || words)) {
+      bytes = words = lines = true;
     }
+
+    if (fileNames.length == 0 || fileNames[0] == "-") {
+      printLine(wc(stdin),
+                fileNames.length == 0 ? "" : "-",
+                7);
+    }
+    else {
+      foreach (fileName; fileNames) {
+        total += processFile(programName, fileName, columnWidth);
+      }
+
+      if (fileNames.length > 1) {
+        printLine(total, "total", columnWidth);
+      }
+    }
+  }
+  catch (Exception e) {
+    writefln("%s: %s", args[0], e.message);
   }
 }
