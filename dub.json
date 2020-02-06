@@ -1,0 +1,9 @@
+{
+	"authors": [
+		"Travis"
+	],
+	"copyright": "Copyright © 2020, Travis",
+	"description": "A minimal D application.",
+	"license": "proprietary",
+	"name": "wc"
+}

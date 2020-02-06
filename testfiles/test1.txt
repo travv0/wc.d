@@ -1,0 +1,75 @@
+import std.stdio;
+import std.algorithm : map, fold;
+import std.string : split;
+import std.range : walkLength, drop;
+
+struct Output {
+  size_t lines;
+  size_t words;
+  size_t bytes;
+  size_t chars;
+
+  Output opBinary(string op)(Output rhs) if (op == "+") {
+    return Output(lines + rhs.lines,
+                  words + rhs.words,
+                  bytes + rhs.bytes,
+                  chars + rhs.chars);
+  }
+
+  unittest {
+    assert(Output(6, 8, 10, 12)
+           == Output(1, 2, 3, 4) + Output(5, 6, 7, 8));
+  }
+}
+
+Output lineToOutput(T)(T line) pure {
+  return Output(line.length != 0 && line[$ - 1] == '\n' ? 1 : 0,
+                line.split.length,
+                line.length,
+                line.walkLength);
+}
+
+pure unittest {
+  assert(Output(1, 5, 22, 20) == lineToOutput("this is あ test line\n"));
+  assert(Output(0, 0, 0, 0) == lineToOutput(""));
+}
+
+Output wc(File file, string path) {
+  try {
+    return file
+      .byLine(KeepTerminator.yes)
+      .map!lineToOutput
+      .fold!"a + b"(Output(0, 0, 0, 0));
+  }
+  catch (Exception e) {
+    writefln("Error: %s", e);
+    return Output(0, 0, 0, 0);
+  }
+}
+
+int maxFileBytesWidth(string[] fileNames) {
+  return 5;
+}
+
+void printLine(Output output, string fileName, int columnWidth) {
+  writefln("%*d %*d %*d %s",
+           columnWidth, output.lines,
+           columnWidth, output.words,
+           columnWidth, output.bytes,
+           fileName);
+}
+
+Output processFile(string fileName, int columnWidth) {
+  auto file = File(fileName);
+  auto output = wc(file, fileName);
+  printLine(output, fileName, columnWidth);
+  return output;
+}
+
+void main(string[] args) {
+  auto fileNames = args.drop(1);
+  auto total = Output(0, 0, 0, 0);
+  foreach (fileName; fileNames) {
+
+  }
+}

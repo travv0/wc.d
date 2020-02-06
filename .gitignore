@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/wc
+wc.so
+wc.dylib
+wc.dll
+wc.a
+wc.lib
+wc-test-*
+*.exe
+*.o
+*.obj
+*.lst
+*~
