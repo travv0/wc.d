@@ -26,19 +26,30 @@ unittest
 struct Options
 {
     mixin(generateMembers!"bool");
+    mixin(generateConstructor!"bool");
+}
+
+string generateConstructor(string type)()
+{
+    return "pure nothrow @safe @nogc this(" ~ opts.map!(o => type ~ " " ~ o).join(", ") ~ ")" ~
+        "{" ~
+        opts.map!(opt => format("this.%s = %s;", opt, opt)).join("\n") ~
+        "}";
 }
 
 struct Output
 {
     mixin(generateMembers!"size_t");
 
+    mixin(generateConstructor!"size_t");
+
     pure nothrow @nogc @safe
     Output opBinary(string op)(Output rhs)
     {
-        return mixin("Output(lines " ~ op ~ " rhs.lines,
-                             words " ~ op ~ " rhs.words,
-                             bytes " ~ op ~ " rhs.bytes,
-                             chars " ~ op ~ " rhs.chars)");
+        return mixin("Output(" ~
+                     opts.map!(opt => format("%s %s rhs.%s", opt, op, opt))
+                         .join(",\n") ~
+                     ")");
     }
 
     unittest
@@ -52,10 +63,7 @@ struct Output
     pure nothrow @safe @nogc
     void opOpAssign(string op)(Output rhs)
     {
-        mixin("lines " ~ op ~ "= rhs.lines;
-               words " ~ op ~ "= rhs.words;
-               bytes " ~ op ~ "= rhs.bytes;
-               chars " ~ op ~ "= rhs.chars;");
+        mixin(opts.map!(opt => format("%s %s= rhs.%s;", opt, op, opt)).join("\n"));
     }
 
     unittest {
@@ -79,7 +87,7 @@ Output lineToOutput(T)(T line, Options options)
 unittest
 {
     assert(Output(1, 5, 22, 20) == lineToOutput("this is あ test line\n", Options(true, true, true, true)));
-    assert(Output(0, 0, 0, 0) == lineToOutput("", Options(true, true, true, true)));
+    assert(Output() == lineToOutput("", Options(true, true, true, true)));
 }
 
 Output wc(T)(T input, Options options)
@@ -87,7 +95,7 @@ Output wc(T)(T input, Options options)
     return input
         .byLine(KeepTerminator.yes)
         .map!(l => lineToOutput!(const char[])(l, options))
-        .fold!"a + b"(Output(0, 0, 0, 0));
+        .fold!"a + b"(Output());
 }
 
 unittest
@@ -142,7 +150,7 @@ void printLine(Output output, string fileName, uint columnWidth, Options options
 
 Output processFile(string programName, string fileName, uint columnWidth, Options options)
 {
-    Output output = Output(0, 0, 0, 0);
+    Output output = Output();
     try
     {
         output = wc(File(fileName), options);
@@ -159,7 +167,7 @@ unittest
 {
     assert(Output(75, 213, 1735, 1733) == processFile("", "testfiles/test1.txt", 5,
                                                       Options(true, true, true, true)));
-    assert(Output(0, 0, 0, 0) == processFile("", "testfiles/", 5,
+    assert(Output() == processFile("", "testfiles/", 5,
                                              Options(true, true, true, true)));
 }
 
@@ -192,10 +200,14 @@ void main(string[] args)
                                "lines|l", "print the newline counts", &options.lines,
                                "words|w", "print the word counts", &options.words);
 
+        // make sure every availabe option is set up with getopt
+        assert(helpInfo.options.length == opts.length + 1);
+
         auto programName = args[0];
         auto fileNames = args.drop(1);
         auto columnWidth = fileBytesSumWidth(fileNames);
         auto total = Output();
+
 
         if (helpInfo.helpWanted)
         {
