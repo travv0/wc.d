@@ -245,3 +245,8 @@ void main(string[] args)
         writefln("%s: %s", args[0], e.message);
     }
 }
+
+unittest
+{
+    main(["-lmcw", "testfiles/test1.txt"]);
+}
