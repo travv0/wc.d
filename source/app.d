@@ -1,25 +1,36 @@
 import std.stdio;
-import std.algorithm : map, fold;
+import std.algorithm : map, fold, filter;
+import std.array : join;
 import std.string : split;
 import std.range : walkLength, drop;
 import std.getopt : getopt, defaultGetoptPrinter, config;
 import std.format : format;
 import core.stdc.stdlib : exit;
 
+immutable auto opts = ["lines", "words", "bytes", "chars"];
+
+pure @safe
+string generateMembers(string type)()
+{
+    return opts
+        .map!(member => format("%s %s;", type, member))
+        .join("\n");
+}
+
+unittest
+{
+    assert("asdf lines;\nasdf words;\nasdf bytes;\nasdf chars;"
+           == generateMembers!"asdf");
+}
+
 struct Options
 {
-    bool lines;
-    bool words;
-    bool bytes;
-    bool chars;
+    mixin(generateMembers!"bool");
 }
 
 struct Output
 {
-    size_t lines;
-    size_t words;
-    size_t bytes;
-    size_t chars;
+    mixin(generateMembers!"size_t");
 
     pure nothrow @nogc @safe
     Output opBinary(string op)(Output rhs)
@@ -117,15 +128,15 @@ unittest
 @safe
 void printLine(Output output, string fileName, uint columnWidth, Options options)
 {
-    void printSection(string name)() {
+    void printSection(string name)()
+    {
         mixin("if (options." ~ name ~ ")
                    writef(\"%*d \", columnWidth, output." ~ name ~ ");");
-
     }
-    printSection!"lines";
-    printSection!"words";
-    printSection!"chars";
-    printSection!"bytes";
+    static foreach (opt; opts)
+    {
+        printSection!opt;
+    }
     writeln(fileName);
 }
 
