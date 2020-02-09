@@ -248,5 +248,5 @@ void main(string[] args)
 
 unittest
 {
-    main(["-lmcw", "testfiles/test1.txt"]);
+    main(["wc", "-lmcw", "testfiles/test1.txt"]);
 }
