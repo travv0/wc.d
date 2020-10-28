@@ -10,50 +10,42 @@ import core.stdc.stdlib : exit;
 immutable auto opts = ["lines", "words", "bytes", "chars", "vowels"];
 
 pure @safe
-string generateMembers(string type)()
-{
+string generateMembers(string type)() {
     return opts
         .map!(member => format("%s %s;", type, member))
         .join("\n");
 }
 
-unittest
-{
+unittest {
     assert("asdf lines;\nasdf words;\nasdf bytes;\nasdf chars;\nasdf vowels;"
            == generateMembers!"asdf");
 }
 
-struct Options
-{
+struct Options {
     mixin(generateMembers!"bool");
     mixin(generateConstructor!"bool");
 }
 
-string generateConstructor(string type)()
-{
-    return "pure nothrow @safe @nogc this(" ~ opts.map!(o => type ~ " " ~ o).join(", ") ~ ")" ~
-        "{" ~
+string generateConstructor(string type)() {
+    return "pure nothrow @safe @nogc this(" ~ opts.map!(o => type ~ " " ~ o).join(", ") ~ ") {" ~
         opts.map!(opt => format("this.%s = %s;", opt, opt)).join("\n") ~
         "}";
 }
 
-struct Output
-{
+struct Output {
     mixin(generateMembers!"size_t");
 
     mixin(generateConstructor!"size_t");
 
     pure nothrow @nogc @safe
-    Output opBinary(string op)(Output rhs)
-    {
+    Output opBinary(string op)(Output rhs) {
         return mixin("Output(" ~
                      opts.map!(opt => format("%s %s rhs.%s", opt, op, opt))
                          .join(",\n") ~
                      ")");
     }
 
-    unittest
-    {
+    unittest {
         assert(Output(6, 8, 10, 12, 14)
                == Output(1, 2, 3, 4, 5) + Output(5, 6, 7, 8, 9));
         assert(Output(-4, -4, -4, -4, -4)
@@ -61,8 +53,7 @@ struct Output
     }
 
     pure nothrow @safe @nogc
-    void opOpAssign(string op)(Output rhs)
-    {
+    void opOpAssign(string op)(Output rhs) {
         mixin(opts.map!(opt => format("%s %s= rhs.%s;", opt, op, opt)).join("\n"));
     }
 
@@ -76,8 +67,7 @@ struct Output
 }
 
 pure @safe
-Output lineToOutput(T)(T line, Options options)
-{
+Output lineToOutput(T)(T line, Options options) {
     return Output(options.lines && line.length != 0 && line[$ - 1] == '\n' ? 1 : 0,
                   options.words ? line.split.length : 0,
                   options.bytes ? line.length : 0,
@@ -85,87 +75,69 @@ Output lineToOutput(T)(T line, Options options)
                   options.vowels ? line.filter!(c => ['a', 'e', 'i', 'o', 'u'].canFind(c)).walkLength : 0);
 }
 
-unittest
-{
+unittest {
     assert(Output(1, 5, 22, 20, 5) == lineToOutput("this is あ test line\n", Options(true, true, true, true, true)));
     assert(Output() == lineToOutput("", Options(true, true, true, true, true)));
 }
 
-Output wc(T)(T input, Options options)
-{
+Output wc(T)(T input, Options options) {
     return input
         .byLine(KeepTerminator.yes)
-        .map!(l => lineToOutput!(const char[])(l, options))
+        .map!(l => lineToOutput(l, options))
         .fold!"a + b"(Output());
 }
 
-unittest
-{
+unittest {
     assert(Output(75, 213, 1735, 1733, 326)
            == wc(File("testfiles/test1.txt"), Options(true, true, true, true, true)));
 }
 
 nothrow @safe
-uint fileBytesSumWidth(string[] fileNames)
-{
+uint fileBytesSumWidth(string[] fileNames) {
     ulong sum = 0;
-    foreach (fileName; fileNames)
-    {
-        try
-        {
+    foreach (fileName; fileNames) {
+        try {
             auto file = File(fileName);
             sum += file.size();
-        }
-        catch (Exception) {}
+        } catch (Exception) {}
     }
 
-    try
-    {
+    try {
         return cast(uint) sum.format!"%u".walkLength;
     }
-    catch (Exception)
-    {
+    catch (Exception) {
         return 0;
     }
 }
 
-unittest
-{
+unittest {
     assert(7 == fileBytesSumWidth(["testfiles/test1.txt", "testfiles/big.txt"]));
 }
 
 @safe
-void printLine(Output output, string fileName, uint columnWidth, Options options)
-{
-    void printSection(string name)()
-    {
+void printLine(Output output, string fileName, uint columnWidth, Options options) {
+    void printSection(string name)() {
         mixin("if (options." ~ name ~ ")
                    writef(\"%*d \", columnWidth, output." ~ name ~ ");");
     }
-    static foreach (opt; opts)
-    {
+    static foreach (opt; opts) {
         printSection!opt;
     }
     writeln(fileName);
 }
 
-Output processFile(string programName, string fileName, uint columnWidth, Options options)
-{
+Output processFile(string programName, string fileName, uint columnWidth, Options options) {
     Output output = Output();
-    try
-    {
+    try {
         output = wc(File(fileName), options);
-    }
-    catch (Exception e)
-    {
+    } catch (Exception e) {
         stderr.writefln("%s: %s: %s", programName, fileName, e.message);
     }
     printLine(output, fileName, columnWidth, options);
     return output;
 }
 
-unittest
-{
+unittest {
     assert(Output(75, 213, 1735, 1733, 326) == processFile("", "testfiles/test1.txt", 5,
                                                            Options(true, true, true, true, true)));
     assert(Output() == processFile("", "testfiles/", 5,
@@ -173,8 +145,7 @@ unittest
 }
 
 pure @safe
-string programInfo(string programName)
-{
+string programInfo(string programName) {
     return format("Usage: %s [OPTION]... [FILE]...
 
 Print newline, word, and byte counts for each FILE, and a total line if
@@ -188,24 +159,20 @@ the following order: newline, word, character, byte.
 ", programName);
 }
 
-string orOptions(string optionsName)()
-{
+string orOptions(string optionsName)() {
     return opts
         .map!(member => format("%s.%s", optionsName, member))
         .join(" || ");
 }
 
-unittest
-{
+unittest {
     assert("options.lines || options.words || options.bytes || options.chars || options.vowels"
            == orOptions!"options");
 }
 
 
-void main(string[] args)
-{
-    try
-    {
+void main(string[] args) {
+    try {
         auto options = Options();
         auto helpInfo = getopt(args,
                                config.bundling,
@@ -224,44 +191,34 @@ void main(string[] args)
         auto columnWidth = fileBytesSumWidth(fileNames);
         auto total = Output();
 
-        if (helpInfo.helpWanted)
-        {
+        if (helpInfo.helpWanted) {
             defaultGetoptPrinter(programInfo(programName), helpInfo.options);
             exit(0);
         }
 
-        if (!mixin(orOptions!"options"))
-        {
+        if (!mixin(orOptions!"options")) {
             options.bytes = options.words = options.lines = true;
         }
 
-        if (fileNames.length == 0 || fileNames[0] == "-")
-        {
+        if (fileNames.length == 0 || fileNames[0] == "-") {
             printLine(wc(stdin, options),
                       fileNames.length == 0 ? "" : "-",
                       7,
                       options);
-        }
-        else
-        {
-            foreach (fileName; fileNames)
-            {
+        } else {
+            foreach (fileName; fileNames) {
                 total += processFile(programName, fileName, columnWidth, options);
             }
 
-            if (fileNames.length > 1)
-            {
+            if (fileNames.length > 1) {
                 printLine(total, "total", columnWidth, options);
             }
         }
-    }
-    catch (Exception e)
-    {
+    } catch (Exception e) {
         writefln("%s: %s", args[0], e.message);
     }
 }
 
-unittest
-{
+unittest {
     main(["wc", "-lmcw", "testfiles/test1.txt"]);
 }
