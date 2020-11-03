@@ -10,32 +10,32 @@ import core.stdc.stdlib : exit;
 immutable auto opts = ["lines", "words", "bytes", "chars", "vowels"];
 
 pure @safe
-string generateMembers(string type)() {
+string generateMembers(T)() {
     return opts
-        .map!(member => format("%s %s;", type, member))
+        .map!(member => format("%s %s;", T.stringof, member))
         .join("\n");
 }
 
 unittest {
-    assert("asdf lines;\nasdf words;\nasdf bytes;\nasdf chars;\nasdf vowels;"
-           == generateMembers!"asdf");
+    assert("int lines;\nint words;\nint bytes;\nint chars;\nint vowels;"
+           == generateMembers!int);
 }
 
 struct Options {
-    mixin(generateMembers!"bool");
-    mixin(generateConstructor!"bool");
+    mixin(generateMembers!bool);
+    mixin(generateConstructor!bool);
 }
 
-string generateConstructor(string type)() {
-    return "pure nothrow @safe @nogc this(" ~ opts.map!(o => type ~ " " ~ o).join(", ") ~ ") {" ~
+string generateConstructor(T)() {
+    return "pure nothrow @safe @nogc this(" ~ opts.map!(o => T.stringof ~ " " ~ o).join(", ") ~ ") {" ~
         opts.map!(opt => format("this.%s = %s;", opt, opt)).join("\n") ~
         "}";
 }
 
 struct Output {
-    mixin(generateMembers!"size_t");
+    mixin(generateMembers!size_t);
 
-    mixin(generateConstructor!"size_t");
+    mixin(generateConstructor!size_t);
 
     pure nothrow @nogc @safe
     Output opBinary(string op)(Output rhs) {
